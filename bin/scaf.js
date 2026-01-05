@@ -77,10 +77,14 @@ Typed ignore mode (-ti):
   - "*/"     → ignores all folders (show only files)
 
 Examples:
-  scaf -i node_modules .git .env
+  scaf                                 # show entire scaffold of current directory
+  scaf -p src -md 2                    # show scaffold of src folder up to depth 2
+  scaf -o tree.json                    # save entire scaffold of current directory as JSON file called tree.json
+  scaf -i node_modules .git .env       # ignore node_modules, .git folder, and .env files
   scaf -ti -i bin/                     # ignore bin folder only
   scaf -ti -i config                   # ignore config.js, config.json, etc.
   scaf -ti -i *.                       # show only folders
+  Note that scaf -i -ti bin/ will give an error, the arguments of the flag -i must come just after it.
 `);
 }
 
@@ -115,7 +119,6 @@ function shouldIgnore(name, isDirectory, ignoreList, typedMode) {
       return !isDirectory && name === pattern;
     }
 
-    // Default mode (original behavior)
     if (pattern.startsWith(".") && !pattern.includes("/")) {
       return name.endsWith(pattern);
     }
@@ -152,7 +155,6 @@ function buildTree(dir, options, depth = 0) {
     const node = {
       name: entry.name,
       type: isDir ? "directory" : "file",
-      children: [],
     };
 
     if (isDir) {
@@ -163,27 +165,6 @@ function buildTree(dir, options, depth = 0) {
   }
 
   return results;
-}
-
-function formatTreeText(tree, prefix = "", isLast = true, isRoot = true) {
-  let output = "";
-
-  tree.forEach((node, index) => {
-    const isLastItem = index === tree.length - 1;
-    const connector = isRoot ? "" : isLastItem ? "└── " : "├── ";
-    //const icon = node.type === "directory" ? "📁 " : "📄 ";
-    const name =
-      node.type === "directory" ? `${node.name}/` : node.name;
-
-    output += `${prefix}${connector}${name}\n`;
-
-    if (node.children && node.children.length > 0) {
-      const newPrefix = isRoot ? "" : prefix + (isLastItem ? "    " : "│   ");
-      output += formatTreeText(node.children, newPrefix, isLastItem, false);
-    }
-  });
-
-  return output;
 }
 
 function formatTreeMinimal(tree, prefix = "") {
