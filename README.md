@@ -3,7 +3,7 @@
 A CLI tool that prints the scaffold of a project, I made it for myself because I needed powerful and easier ignore patterns in my windows 10 machine. Its node based, so cross-platform, and It can output to a txt or a json file, see examples bellow.
 
 ## Installation
-
+Copy all the contents of this repo to your machine, then use the cli tool to get into the folder and run
 ```bash
 npm install -g scaf
 ```
@@ -13,6 +13,8 @@ npm install -g scaf
 ```bash
 npm uninstall -g scaf
 ```
+
+You absolutely can use the package manager of your choice, **it doesn't need to be npm**, but you need node already installed.
 
 ## Usage
 
@@ -44,7 +46,7 @@ scaf -i node_modules .git .env .log
 - `node_modules` → ignores file or folder named "node_modules"
 - `.log` → ignores all files ending in `.log`
 
-### Typed Mode (`-i` + `-ti`)
+### Typed Mode (`-ti` + `-i`)
 
 Makes patterns **type-aware**. Use trailing `/` for folders:
 
@@ -115,7 +117,7 @@ scaf -ti -i node_modules/ *.md .env config
 scaf -p ./myapp -md 3 -ti -i node_modules/ dist/ *.log -o output.txt
 ```
 
-### Notes
+### Note!
 ```bash
 scaf -i -ti src/
 ```
@@ -128,13 +130,13 @@ scaf -ti -i src/
 
 ### Text (default)
 ```txt
-
 └── MyApp/
 ├── src/
 │   ├── components/
 │   │   └── Button.tsx
 │   └── index.ts
 └── package.json
+```
 
 ### JSON
 ```json
