@@ -1,0 +1,11 @@
+{
+  "name": "scaf",
+  "version": "1.0.0",
+  "description": "A cross-platform directory tree CLI tool",
+  "bin": {
+    "scaf": "./bin/scaf.js"
+  },
+  "type": "module",
+  "keywords": ["cli", "tree", "directory", "scaffold"],
+  "license": "MIT"
+}
