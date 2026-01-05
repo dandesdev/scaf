@@ -10,7 +10,7 @@ function parseArgs(args) {
     output: null,
     outputFormat: "text",
     ignore: [],
-    strictIgnore: false,
+    typedIgnore: false,
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -41,9 +41,9 @@ function parseArgs(args) {
         }
         break;
 
-      case "-strict":
-      case "-s":
-        options.strictIgnore = true;
+      case "-typed-ignore":
+      case "-ti":
+        options.typedIgnore = true;
         break;
 
       case "-h":
@@ -67,18 +67,55 @@ Options:
   -maxdepth, -md <n>    Maximum depth to traverse (default: infinite)
   -o <file>             Output to file (.txt or .json)
   -ignore, -i <...>     Patterns to ignore (folders, files, extensions)
+  -typed-ignore, -ti           Typed ignore mode (see below)
   -h, --help            Show this help message
 
+Typed ignore mode (-ti):
+  - "name"   → ignores files with that basename (any extension)
+  - "name/"  → ignores folders with that name
+  - "*."     → ignores all files (show only folders)
+  - "*/"     → ignores all folders (show only files)
+
 Examples:
-  scaf
-  scaf -path ./src -md 2
-  scaf -g node_modules .git .env -o structure.txt
-  scaf -o tree.json
+  scaf -i node_modules .git .env
+  scaf -ti -i bin/                     # ignore bin folder only
+  scaf -ti -i config                   # ignore config.js, config.json, etc.
+  scaf -ti -i *.                       # show only folders
 `);
 }
 
-function shouldIgnore(name, ignoreList) {
+function shouldIgnore(name, isDirectory, ignoreList, typedMode) {
   return ignoreList.some((pattern) => {
+    if (pattern === "*.") {
+      return !isDirectory;
+    }
+
+    if (pattern === "*/") {
+      return isDirectory;
+    }
+
+    if (typedMode) {
+      // Typed mode: trailing / means folder
+      if (pattern.endsWith("/")) {
+        const folderName = pattern.slice(0, -1);
+        return isDirectory && name === folderName;
+      }
+
+      // Typed mode: no extension = match file basename (without ext)
+      const patternHasExt = pattern.includes(".") && !pattern.startsWith(".");
+      if (!patternHasExt) {
+        if (isDirectory) return false;
+        const baseName = name.includes(".")
+          ? name.substring(0, name.lastIndexOf("."))
+          : name;
+        return baseName === pattern;
+      }
+
+      // Has extension: exact match for files only
+      return !isDirectory && name === pattern;
+    }
+
+    // Default mode (original behavior)
     if (pattern.startsWith(".") && !pattern.includes("/")) {
       return name.endsWith(pattern);
     }
@@ -105,10 +142,12 @@ function buildTree(dir, options, depth = 0) {
   });
 
   for (const entry of entries) {
-    if (shouldIgnore(entry.name, options.ignore)) continue;
-
-    const fullPath = path.join(dir, entry.name);
+      
     const isDir = entry.isDirectory();
+    
+    if (shouldIgnore(entry.name, isDir, options.ignore, options.typedIgnore)) continue;
+    
+    const fullPath = path.join(dir, entry.name);
 
     const node = {
       name: entry.name,
