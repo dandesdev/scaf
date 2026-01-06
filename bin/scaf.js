@@ -13,7 +13,7 @@ function parseArgs(args) {
     typedIgnore: false,
     buffered: false,
     only: [],
-    gitignore: false,
+    gitignore: true,
     stats: null,           // null | "console" | "include" | "all"
     dirsOnly: false,
     showSize: false,
@@ -26,12 +26,12 @@ function parseArgs(args) {
     const arg = args[i];
 
     switch (arg) {
-        case "-path":
+        case "--path":
         case "-p":
             options.path = path.resolve(args[++i] || ".");
             break;
 
-        case "-maxdepth":
+        case "--maxdepth":
         case "-md":
             options.maxDepth = parseInt(args[++i], 10) || Infinity;
             break;
@@ -39,23 +39,23 @@ function parseArgs(args) {
         case "-o":
             options.output = args[++i] || "output.txt";
             if (options.output.endsWith(".json")) {
-            options.outputFormat = "json";
+                options.outputFormat = "json";
             }
             break;
 
-        case "-ignore":
+        case "--ignore":
         case "-i":
             while (args[i + 1] && !args[i + 1].startsWith("-")) {
-            options.ignore.push(args[++i]);
+                options.ignore.push(args[++i]);
             }
             break;
 
-        case "-typed-ignore":
+        case "--typed-ignore":
         case "-ti":
             options.typedIgnore = true;
             break;
 
-        case "-buffered":
+        case "--buffered":
         case "-b":
             options.buffered = true;
             break;
@@ -68,17 +68,34 @@ function parseArgs(args) {
             break;
 
         case "--gitignore":
-            options.gitignore = true;
+            const gitArg = args[i+1];
+            if (gitArg && !gitArg.startsWith("-")) {
+                const val = args[++i];
+                if(["true", "false"].includes(val.toLowerCase())) {
+                    options.gitignore = val.toLowerCase();
+                } else {
+                    console.error(`Invalid --gitignore value: ${val}. Use: true, false`);
+                    process.exit(1);
+                }
+            } else {
+                options.gitignore = true;
+            }
             break;
 
         case "--stats":
-            const statsArg = args[i + 1];
-            if (statsArg && !statsArg.startsWith("-")) {
-                options.stats = args[++i];
+        const statsArg = args[i + 1];
+        if (statsArg && !statsArg.startsWith("-")) {
+            const val = args[++i];
+            if (["console", "include", "all"].includes(val)) {
+                options.stats = val;
             } else {
-                options.stats = "console";
+                console.error(`Invalid --stats value: ${val}. Use: console, include, all`);
+                process.exit(1);
             }
-            break;
+        } else {
+            options.stats = "console";
+        }
+        break;
 
         case "-d":
         case "--dirs-only":
@@ -134,7 +151,7 @@ Options:
   --gitignore              Respect .gitignore rules
   --stats [mode]           Show stats: console (default), include, all
   --size                   Show file sizes
-  -a,   --show-hidden      Show hidden files (default)
+  -a,   --show-hidden      Show hidden files (dotfiles)
   -q,   --quiet            Suppress info messages
   --sort <type>            Sort by: name (default), size, date
   -b,   --buffered         Use buffered mode for text output
@@ -322,25 +339,21 @@ function streamTree(dir, options, stats, depth = 0, prefix = "") {
     const connector = isLastItem ? "└── " : "├── ";
     const fullPath = path.join(dir, entry.name);
 
-    if (isDir) {
-      stats.directories++;
-    } else {
-      stats.files++;
-      const stat = getEntryStats(fullPath);
-      if (stat) {
-        stats.totalSize += stat.size;
-      }
-    }
-    stats.maxDepthReached = Math.max(stats.maxDepthReached, depth + 1);
-
     let name = isDir ? `${entry.name}/` : entry.name;
 
-    if (options.showSize && !isDir) {
-      const stat = getEntryStats(fullPath);
-      if (stat) {
+    if (isDir) {
+    stats.directories++;
+    } else {
+    stats.files++;
+    const stat = getEntryStats(fullPath);
+    if (stat) {
+        stats.totalSize += stat.size;
+        if (options.showSize) {
         name += ` (${formatSize(stat.size)})`;
-      }
+        }
     }
+    }
+    stats.maxDepthReached = Math.max(stats.maxDepthReached, depth + 1);
 
     const line = `${prefix}${connector}${name}`;
     options.writer(line);
@@ -392,10 +405,12 @@ function buildTree(dir, options, stats, depth = 0) {
       stats.files++;
       const stat = getEntryStats(fullPath);
       if (stat) {
-        stats.totalSize += stat.size;
+      stats.totalSize += stat.size;
+      if (options.showSize) {
         node.size = stat.size;
         node.sizeFormatted = formatSize(stat.size);
       }
+    }
     }
     
     stats.maxDepthReached = Math.max(stats.maxDepthReached, depth + 1);
@@ -528,8 +543,8 @@ function main() {
     options.writer = (line) => console.log(line);
   }
 
-  options.writer(`${rootName}/`);
-  streamTree(options.path, options, stats, 0, "");
+  options.writer(`└── ${rootName}/`);
+  streamTree(options.path, options, stats, 0, "    ");
 
   const finalize = () => {
     if (options.stats === "include" || options.stats === "all") {
