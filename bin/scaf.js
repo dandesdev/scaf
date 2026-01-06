@@ -46,6 +46,11 @@ function parseArgs(args) {
         options.typedIgnore = true;
         break;
 
+      case "-buffered":
+      case "-b":
+        options.buffered = true;
+        break;
+
       case "-h":
       case "--help":
         printHelp();
@@ -106,7 +111,7 @@ function shouldIgnore(name, isDirectory, ignoreList, typedMode) {
       }
 
       // Typed mode: no extension = match file basename (without ext)
-      const patternHasExt = pattern.includes(".") && !pattern.startsWith(".");
+      const patternHasExt = pattern.lastIndexOf(".") > 0 && !pattern.startsWith(".");
       if (!patternHasExt) {
         if (isDirectory) return false;
         const baseName = name.includes(".")
@@ -126,6 +131,43 @@ function shouldIgnore(name, isDirectory, ignoreList, typedMode) {
   });
 }
 
+// Streaming mode for infinite scale
+function streamTree(dir, options, depth = 0, prefix = "") {
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  entries = entries.filter((entry) => {
+    const isDir = entry.isDirectory();
+    return !shouldIgnore(entry.name, isDir, options.ignore, options.typedIgnore);
+  });
+
+  entries.sort((a, b) => {
+    if (a.isDirectory() && !b.isDirectory()) return -1;
+    if (!a.isDirectory() && b.isDirectory()) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  entries.forEach((entry, index) => {
+    const isDir = entry.isDirectory();
+    const isLastItem = index === entries.length - 1;
+    const connector = isLastItem ? "└── " : "├── ";
+    const name = isDir ? `${entry.name}/` : entry.name;
+
+    const line = `${prefix}${connector}${name}`;
+    options.writer(line);
+
+    if (isDir && depth < options.maxDepth - 1) {
+      const newPrefix = prefix + (isLastItem ? "    " : "│   ");
+      streamTree(path.join(dir, entry.name), options, depth + 1, newPrefix, isLastItem);
+    }
+  });
+}
+
+// Old buffered mode
 function buildTree(dir, options, depth = 0) {
   const results = [];
 
@@ -157,7 +199,7 @@ function buildTree(dir, options, depth = 0) {
       type: isDir ? "directory" : "file",
     };
 
-    if (isDir) {
+    if (isDir && depth + 1 < options.maxDepth) {
       node.children = buildTree(fullPath, options, depth + 1);
     }
 
@@ -166,6 +208,7 @@ function buildTree(dir, options, depth = 0) {
 
   return results;
 }
+
 
 function formatTreeMinimal(tree, prefix = "") {
   let output = "";
@@ -197,32 +240,54 @@ function main() {
   }
 
   const rootName = path.basename(options.path);
-  const tree = buildTree(options.path, options);
 
-  const fullTree = [
-    {
-      name: rootName,
-      type: "directory",
-      children: tree,
-    },
-  ];
-
+  // JSON needs complete scafold, so output is always buffered
   if (options.outputFormat === "json") {
+    const tree = buildTree(options.path, options);
+    const fullTree = [{ name: rootName, type: "directory", children: tree }];
     const jsonOutput = JSON.stringify(fullTree, null, 2);
+
     if (options.output) {
       fs.writeFileSync(options.output, jsonOutput);
       console.log(`✓ JSON output saved to ${options.output}`);
     } else {
       console.log(jsonOutput);
     }
-  } else {
+    return;
+  }
+
+  // Text output on buffered mode
+  if (options.buffered) {
+    const tree = buildTree(options.path, options);
+    const fullTree = [{ name: rootName, type: "directory", children: tree }];
     const textOutput = formatTreeMinimal(fullTree);
+
     if (options.output) {
       fs.writeFileSync(options.output, textOutput);
       console.log(`✓ Output saved to ${options.output}`);
     } else {
       console.log(textOutput);
     }
+    return;
+  }
+
+  // Text output on streaming (default)
+  let writeStream = null;
+
+  if (options.output) {
+    writeStream = fs.createWriteStream(options.output);
+    options.writer = (line) => writeStream.write(line + "\n");
+  } else {
+    options.writer = (line) => console.log(line);
+  }
+
+  options.writer(`└── ${rootName}/`);
+  streamTree(options.path, options, 0, "    ");
+
+  if (writeStream) {
+    writeStream.end(() => {
+      console.log(`✓ Output saved to ${options.output}`);
+    });
   }
 }
 
