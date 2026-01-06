@@ -114,7 +114,7 @@ function shouldIgnore(name, isDirectory, ignoreList, typedMode) {
       const patternHasExt = pattern.lastIndexOf(".") > 0 && !pattern.startsWith(".");
       if (!patternHasExt) {
         if (isDirectory) return false;
-        const baseName = name.includes(".")
+        const baseName = name.lastIndexOf(".") !== -1
           ? name.substring(0, name.lastIndexOf("."))
           : name;
         return baseName === pattern;
