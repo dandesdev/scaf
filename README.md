@@ -3,15 +3,9 @@
 A CLI tool that prints the scaffold of a project, I made it for myself because I needed powerful and easier ignore patterns in my windows 10 machine. Its node based, so cross-platform, and It can output to a txt or a json file, see examples bellow.
 
 ## Installation
-Copy all the contents of this repo to your machine, then use the cli tool to get into the folder and run
-```bash
-npm install -g scaf
-```
-
-### Uninstall
 
 ```bash
-npm uninstall -g scaf
+npm install -g @dandesdev/scaf
 ```
 
 You absolutely can use the package manager of your choice, **it doesn't need to be npm**, but you need node already installed.

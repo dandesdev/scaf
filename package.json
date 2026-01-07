@@ -6,6 +6,14 @@
     "scaf": "./bin/scaf.js"
   },
   "type": "module",
-  "keywords": ["cli", "tree", "directory", "scaffold"],
-  "license": "MIT"
+  "keywords": [
+    "cli",
+    "tree",
+    "directory",
+    "scaffold"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@dandesdev/scaf": "^1.0.0"
+  }
 }
