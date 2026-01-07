@@ -16,6 +16,21 @@ npm uninstall -g scaf
 
 You absolutely can use the package manager of your choice, **it doesn't need to be npm**, but you need node already installed.
 
+## Project Structure
+
+The code is organized into focused modules in the `lib/` folder:
+
+- `parseArgs.js` - Command-line argument parsing
+- `help.js` - Help message display
+- `ignore.js` - Gitignore/dockerignore file loading
+- `filter.js` - File filtering logic
+- `sort.js` - Sorting and stat retrieval
+- `format.js` - Output formatting for text and JSON
+- `stats.js` - Statistics tracking and calculation
+- `scan.js` - Directory tree building and streaming
+
+The main entry point (`bin/scaf.js`) orchestrates these modules.
+
 ## Usage
 
 ```bash
@@ -31,6 +46,17 @@ scaf [options]
 | `--output` | `-o` | Save to file (.txt or .json) | Print to console |
 | `--ignore` | `-i` | Patterns to ignore | None |
 | `--typed-ignore` | `-ti` | Enable typed ignore mode | Disabled |
+| `--only` | `-n` | Show only matching patterns | All (filtered) |
+| `--dirs-only` | `-d` | Show only directories | Disabled |
+| `--size` | - | Show file sizes | Disabled |
+| `--show-hidden` | `-a` | Show hidden files (dotfiles) | Disabled |
+| `--sort` | - | Sort by: name, size, date | name |
+| `--stats` | - | Show stats: console, include, all | None |
+| `--stats-only` | - | Show detailed stats: strict, all | None |
+| `--gitignore` | - | Load .gitignore patterns (true/false) | true |
+| `--dockerignore` | - | Load .dockerignore patterns (true/false) | true |
+| `--buffered` | `-b` | Use buffered mode for text output | Disabled |
+| `--quiet` | `-q` | Suppress info messages | Disabled |
 | `--help` | `-h` | Show help | - |
 
 ## Ignore Patterns
@@ -107,6 +133,11 @@ scaf -ti -i config
 scaf -ti -i *.
 ```
 
+### Show only files (ignore all folders)
+```bash
+scaf -ti -i */
+```
+
 ### Complex ignore
 ```bash
 scaf -ti -i node_modules/ *.md .env config
@@ -115,6 +146,28 @@ scaf -ti -i node_modules/ *.md .env config
 ### Combine options
 ```bash
 scaf -p ./myapp -md 3 -ti -i node_modules/ dist/ *.log -o output.txt
+```
+
+### Show only TypeScript files
+```bash
+scaf -n .ts .tsx
+```
+
+### Show file sizes sorted by size
+```bash
+scaf --size --sort size
+```
+
+### Generate statistics
+```bash
+scaf --stats
+scaf --stats all -o report.txt
+scaf --stats-only -o stats.json
+```
+
+### Include hidden files
+```bash
+scaf -a
 ```
 
 ### Note!
