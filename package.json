@@ -1,6 +1,6 @@
 {
   "name": "@dandesdev/scaf",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A cross-platform directory scaffold CLI tool",
   "bin": {
     "scaf": "./bin/scaf.js"
